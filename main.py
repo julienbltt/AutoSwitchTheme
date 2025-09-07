@@ -70,26 +70,15 @@ class TrayApp:
         self.sun_hours_monitor = None
         self.running = True
 
-    def create_icon(self):
-        """Create a simple icon for the tray"""
-        # Create a 64x64 image with a sun/moon symbol
-        size = (64, 64)
-        image = Image.new('RGB', size, color=(0, 120, 215))  # Windows blue
-        draw = ImageDraw.Draw(image)
+    def load_icon(self):
+        """Load a simple icon for the tray"""
+        icon_path = APPDATA_PATH / "app.ico"
+        if icon_path.exists():
+            return Image.open(icon_path)
+        else:
+            logger.error("Icon not found")
+            return None
 
-        # Draw a simple sun/moon symbol
-        draw.ellipse([16, 16, 48, 48], fill=(255, 255, 255), outline=(0, 0, 0), width=2)
-
-        # Add rays for sun effect
-        for i in range(8):
-            angle = i * 45
-            x1 = 32 + 25 * (angle % 90 - 45) / 45
-            y1 = 32 + 25 * (angle // 90 * 2 - 1)
-            x2 = 32 + 35 * (angle % 90 - 45) / 45
-            y2 = 32 + 35 * (angle // 90 * 2 - 1)
-            draw.line([x1, y1, x2, y2], fill=(255, 255, 0), width=2)
-
-        return image
 
     def on_show_status(self, icon, item):
         """Show current status"""
@@ -119,8 +108,8 @@ class TrayApp:
 
     def setup_tray(self):
         """Setup the system tray icon and menu"""
-        # Create the icon
-        icon_image = self.create_icon()
+        # Load the icon
+        icon_image = self.load_icon()
 
         # Create menu
         menu = pystray.Menu(

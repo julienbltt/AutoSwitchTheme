@@ -64,7 +64,7 @@ python main.py
 L'application peut être compilée en exécutable autonome avec PyInstaller :
 
 ```bash
-pyinstaller --clean -w --optimize=2 -n AutoSwitchTheme main.py
+pyinstaller -F -w --optimize=2 --icon app.ico -n AutoSwitchTheme main.py
 ```
 
 ### Utilisation de l'application
