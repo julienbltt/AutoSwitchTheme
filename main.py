@@ -152,6 +152,7 @@ class SunHoursMonitor:
         self.api_token = api_token
         self.insee = insee
         self.sun_hours = {
+            "timestamp": None,
             "sunrise": None,
             "sunset": None,
         }
@@ -165,6 +166,7 @@ class SunHoursMonitor:
                 file_data = json_load(f)
                 if file_data["timestamp"] == datetime.today().strftime("%Y-%m-%d"):
                     logger.info("Sun hours fetched from cache")
+                    self.sun_hours["timestamp"] = file_data["timestamp"]
                     self.sun_hours["sunrise"] = file_data["sunrise"][:5]
                     self.sun_hours["sunset"] = file_data["sunset"][:5]
         else:
@@ -172,23 +174,25 @@ class SunHoursMonitor:
             url = f"https://api.meteo-concept.com/api/ephemeride/0?token={self.api_token}&insee={self.insee}"
             response = get(url)
             ephemeride = response.json()
-            logger.info("Ephemeride fetched from API")
+
+            logger.info("Sun hours fetched from API")
 
             # Update sun hours
+            self.sun_hours["timestamp"] = datetime.today().strftime("%Y-%m-%d")
             self.sun_hours["sunrise"] = ephemeride["ephemeride"]["sunrise"][:5]
             self.sun_hours["sunset"] = ephemeride["ephemeride"]["sunset"][:5]
             
             # Save sun hours to cache
             with cache_path.open("w") as f:
                 file_data = self.sun_hours
-                file_data["timestamp"] = datetime.today().strftime("%Y-%m-%d")
                 json_dump(file_data, f)
 
+        logger.debug(f"Sun hours: {self.sun_hours}")
         return self.sun_hours
 
 class ThemeMonitor:
     def __init__(self):
-        self.theme = "light"
+        self.theme = None
 
     def set_windows_theme(self, theme: str):
         """
@@ -250,14 +254,24 @@ def main_thread(tray_app: TrayApp):
 
     # Run scheduler
     while tray_app.running:
-        if(
-            datetime.now() >= datetime.strptime(sun_hours["sunrise"], "%H:%M")
-            and
-            datetime.now() < datetime.strptime(sun_hours["sunset"], "%H:%M")
-        ):
+        time_now = datetime.now()
+        time_sunrise = datetime.strptime(sun_hours["timestamp"] + " " + sun_hours["sunrise"], "%Y-%m-%d %H:%M")
+        time_sunset = datetime.strptime(sun_hours["timestamp"] + " " + sun_hours["sunset"], "%Y-%m-%d %H:%M")
+
+        logger.debug("Checking theme")
+        logger.debug("Current time: {}, Sunrise: {}, Sunset: {}".format(
+                time_now,
+                time_sunrise,
+                time_sunset
+            )
+        )
+
+        if(time_now >= time_sunrise and time_now < time_sunset):
             theme_monitor.switch_to_light_theme()
+            logger.debug("Switching to light theme")
         else:
             theme_monitor.switch_to_dark_theme()
+            logger.debug("Switching to dark theme")
 
         schedule.run_pending()
         sleep(60)
